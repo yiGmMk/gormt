@@ -193,6 +193,11 @@ type conditionInfo struct {
 	`
 
 	genlogic = `{{$obj := .}}{{$list := $obj.Em}}
+	import(
+	 	"github.com/gyf841010/pz-infra-new/database"
+		"github.com/pkg/errors"
+	)
+
 type _{{$obj.StructName}}Mgr struct {
 	*_BaseMgr
 }
