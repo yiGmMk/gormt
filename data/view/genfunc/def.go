@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"github.com/gyf841010/pz-infra-new/database"
 )
 
 var globalIsRelated bool = true  // 全局预加载
@@ -228,7 +227,7 @@ func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
 	db := database.GetNonTransactionDatabases(dbs)
 	err := db.Table(obj.TableName()).Create(obj).Error
 	if err != nil {
-		return errors.Wrapf(err, "新增{{$name.获取数据库名字}}失败")
+		return errors.Wrapf(err, "新增{{$obj.StructName}}记录失败")
 	}
 	return nil
 }
@@ -240,7 +239,7 @@ func (obj *{{$obj.StructName}}) Save(dbs ...*gorm.DB) error {
 		Omit(clause.Associations).
 		Save(obj).Error
 	if err != nil {
-		return errors.Wrapf(err, "保存{{$name.获取数据库名字}}失败,id=%d", obj.ID)
+		return errors.Wrapf(err, "保存{{$obj.StructName}}失败,id=%d", obj.ID)
 	}
 	return nil
 }
@@ -252,7 +251,7 @@ func (obj *{{$obj.StructName}}) UpdateColumnsByID(data map[string]interface{}, d
 		Omit(clause.Associations).
 		Updates(data).Error
 	if err != nil {
-		return errors.Wrapf(err, "保存{{$name.获取数据库名字}}失败,id=%d", obj.ID)
+		return errors.Wrapf(err, "保存{{$obj.StructName}}失败,id=%d", obj.ID)
 	}
 	return nil
 }
