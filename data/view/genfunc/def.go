@@ -238,9 +238,10 @@ func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
 }
 
 // 保存全部字段,包含零值
-func (obj *{{$obj.StructName}}) Save(dbs ...*gorm.DB) error {
+func (obj *{{$obj.StructName}}) SaveByID(dbs ...*gorm.DB) error {
 	db := database.GetNonTransactionDatabases(dbs)
 	err := db.Table(obj.TableName()).
+		Where("id = ?", obj.ID).
 		Omit(clause.Associations).
 		Save(obj).Error
 	if err != nil {
