@@ -3,16 +3,16 @@ package genfunc
 const (
 	genTnf = `
 // TableName get sql table name.获取数据库表名
-func (m *{{.StructName}}) TableName() string {
+func (m {{.StructName}}) TableName() string {
 	return "{{.TableName}}"
 }
 `
 	genColumn = `
 // {{.StructName}}Columns get sql column name.获取数据库列名
 var {{.StructName}}Columns = struct { {{range $em := .Em}}
-	{{$em.StructName}} string{{end}}    
+	{{$em.StructName}} string{{end}}
 	}{ {{range $em := .Em}}
-		{{$em.StructName}}:"{{$em.ColumnName}}",  {{end}}           
+		{{$em.StructName}}:"{{$em.ColumnName}}",  {{end}}
 	}
 `
 	genBase = `
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"github.com/gyf841010/pz-infra-new/database"
 )
 
 var globalIsRelated bool = true  // 全局预加载
@@ -198,10 +199,8 @@ type _{{$obj.StructName}}Mgr struct {
 }
 
 // {{$obj.StructName}}Mgr open func
-func {{$obj.StructName}}Mgr(db *gorm.DB) *_{{$obj.StructName}}Mgr {
-	if db == nil {
-		panic(fmt.Errorf("{{$obj.StructName}}Mgr need init by db"))
-	}
+func {{$obj.StructName}}Mgr(dbs ...*gorm.DB) *_{{$obj.StructName}}Mgr {
+	db := database.GetNonTransactionDatabases(dbs)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &_{{$obj.StructName}}Mgr{_BaseMgr: &_BaseMgr{DB: db.Table("{{GetTablePrefixName $obj.TableName}}"), isRelated: globalIsRelated,ctx:ctx,cancel:cancel,timeout:-1}}
 }
@@ -217,11 +216,45 @@ func (obj *_{{$obj.StructName}}Mgr) Reset() *_{{$obj.StructName}}Mgr {
 	return obj
 }
 
-// Get 获取 
+// Get 获取
 func (obj *_{{$obj.StructName}}Mgr) Get() (result {{$obj.StructName}}, err error) {
 	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).First(&result).Error
 	{{GenPreloadList $obj.PreloadList false}}
 	return
+}
+
+// Add 新增记录
+func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
+	db := database.GetNonTransactionDatabases(dbs)
+	err := db.Table(obj.TableName()).Create(obj).Error
+	if err != nil {
+		return errors.Wrapf(err, "新增{{$name.获取数据库名字}}失败")
+	}
+	return nil
+}
+
+// 保存全部字段,包含零值
+func (obj *{{$obj.StructName}}) Save(dbs ...*gorm.DB) error {
+	db := database.GetNonTransactionDatabases(dbs)
+	err := db.Table(obj.TableName()).
+		Omit(clause.Associations).
+		Save(obj).Error
+	if err != nil {
+		return errors.Wrapf(err, "保存{{$name.获取数据库名字}}失败,id=%d", obj.ID)
+	}
+	return nil
+}
+
+// 保存部分字段,包含零值
+func (obj *{{$obj.StructName}}) UpdateColumnsByID(data map[string]interface{}, dbs ...*gorm.DB) error {
+	db := database.GetNonTransactionDatabases(dbs)
+	err := db.Table(obj.TableName()).Where("id = ?", obj.ID).
+		Omit(clause.Associations).
+		Updates(data).Error
+	if err != nil {
+		return errors.Wrapf(err, "保存{{$name.获取数据库名字}}失败,id=%d", obj.ID)
+	}
+	return nil
 }
 
 // Gets 获取批量结果
@@ -247,7 +280,8 @@ func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $o
 {{end}}
 
 // GetByOption 功能选项模式获取
-func (obj *_{{$obj.StructName}}Mgr) GetByOption(opts ...Option) (result {{$obj.StructName}}, err error) {
+func (obj *_{{$obj.StructName}}Mgr) GetByOption(opts ...Option) (result *{{$obj.StructName}}, err error) {
+	result = &{{$obj.StructName}}{}
 	options := options{
 		query: make(map[string]interface{}, len(opts)),
 	}
@@ -255,7 +289,7 @@ func (obj *_{{$obj.StructName}}Mgr) GetByOption(opts ...Option) (result {{$obj.S
 		o.apply(&options)
 	}
 
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Where(options.query).First(&result).Error
+	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Where(options.query).First(result).Error
 	{{GenPreloadList $obj.PreloadList false}}
 	return
 }
@@ -346,9 +380,9 @@ func (obj *_{{$obj.StructName}}Mgr) GetBatchFrom{{$oem.ColStructName}}({{CapLowe
 		if err = obj.NewDB().Table("{{$obj.ForeignkeyTableName}}").Where("{{$obj.ForeignkeyCol}} = ?", result.{{$obj.ColStructName}}).Find(&result.{{$obj.ForeignkeyStructName}}List).Error;err != nil { // {{$obj.Notes}}
 				if err != gorm.ErrRecordNotFound { // 非 没找到
 					return
-				}	
-			} {{else}} 
-		if err = obj.NewDB().Table("{{$obj.ForeignkeyTableName}}").Where("{{$obj.ForeignkeyCol}} = ?", result.{{$obj.ColStructName}}).Find(&result.{{$obj.ForeignkeyStructName}}).Error; err != nil { // {{$obj.Notes}} 
+				}
+			} {{else}}
+		if err = obj.NewDB().Table("{{$obj.ForeignkeyTableName}}").Where("{{$obj.ForeignkeyCol}} = ?", result.{{$obj.ColStructName}}).Find(&result.{{$obj.ForeignkeyStructName}}).Error; err != nil { // {{$obj.Notes}}
 				if err != gorm.ErrRecordNotFound { // 非 没找到
 					return
 				}
@@ -360,8 +394,8 @@ func (obj *_{{$obj.StructName}}Mgr) GetBatchFrom{{$oem.ColStructName}}({{CapLowe
 				if err != gorm.ErrRecordNotFound { // 非 没找到
 					return
 				}
-			} {{else}} 
-		if err = obj.NewDB().Table("{{$obj.ForeignkeyTableName}}").Where("{{$obj.ForeignkeyCol}} = ?", results[i].{{$obj.ColStructName}}).Find(&results[i].{{$obj.ForeignkeyStructName}}).Error; err != nil { // {{$obj.Notes}} 
+			} {{else}}
+		if err = obj.NewDB().Table("{{$obj.ForeignkeyTableName}}").Where("{{$obj.ForeignkeyCol}} = ?", results[i].{{$obj.ColStructName}}).Find(&results[i].{{$obj.ForeignkeyStructName}}).Error; err != nil { // {{$obj.Notes}}
 				if err != gorm.ErrRecordNotFound { // 非 没找到
 					return
 				}
