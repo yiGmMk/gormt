@@ -230,7 +230,21 @@ func (obj *_{{$obj.StructName}}Mgr) Get() (result {{$obj.StructName}}, err error
 // Add 新增记录
 func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
 	db := database.GetNonTransactionDatabases(dbs)
-	err := db.Table(obj.TableName()).Create(obj).Error
+	err := db.Table(obj.TableName()).
+		Omit(clause.Associations).
+		Create(obj).Error
+	if err != nil {
+		return errors.Wrapf(err, "新增{{$obj.StructName}}记录失败")
+	}
+	return nil
+}
+
+// 新增多条记录
+func (obj *{{$obj.StructName}}) BatchAdd(objs []*{{$obj.StructName}}, dbs ...*gorm.DB) error {
+	db := database.GetNonTransactionDatabases(dbs)
+	err := db.Table(c.TableName()).
+		Omit(clause.Associations).
+		Create(&objs).Error
 	if err != nil {
 		return errors.Wrapf(err, "新增{{$obj.StructName}}记录失败")
 	}
