@@ -241,6 +241,9 @@ func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
 
 // 新增多条记录
 func (obj {{$obj.StructName}}) BatchAdd(objs []*{{$obj.StructName}}, dbs ...*gorm.DB) error {
+	if len(objs) == 0 {
+		return nil
+	}
 	db := database.GetNonTransactionDatabases(dbs)
 	err := db.Table(obj.TableName()).
 		Omit(clause.Associations).
