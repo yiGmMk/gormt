@@ -240,9 +240,9 @@ func (obj *{{$obj.StructName}}) Add(dbs ...*gorm.DB) error {
 }
 
 // 新增多条记录
-func (obj *{{$obj.StructName}}) BatchAdd(objs []*{{$obj.StructName}}, dbs ...*gorm.DB) error {
+func (obj {{$obj.StructName}}) BatchAdd(objs []*{{$obj.StructName}}, dbs ...*gorm.DB) error {
 	db := database.GetNonTransactionDatabases(dbs)
-	err := db.Table(c.TableName()).
+	err := db.Table(obj.TableName()).
 		Omit(clause.Associations).
 		Create(&objs).Error
 	if err != nil {
