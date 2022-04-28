@@ -37,6 +37,7 @@ func (e *GenElement) AddTag(k string, v string) {
 }
 
 // Generate Get the result data.获取结果数据
+// 生成结构体,把注释放到description标签中,不需要单独注释
 func (e *GenElement) Generate() string {
 	tag := ""
 	if e.Tags != nil {
@@ -50,11 +51,16 @@ func (e *GenElement) Generate() string {
 		for _, v := range ks {
 			tags = append(tags, fmt.Sprintf(`%v:"%v"`, v, strings.Join(e.Tags[v], ";")))
 		}
+		if len(e.Notes) > 0 {
+			tags = append(tags, fmt.Sprintf(`description:"%s"`, e.Notes))
+		}
 		tag = fmt.Sprintf("`%v`", strings.Join(tags, " "))
 	}
 
 	var p generate.PrintAtom
-	if len(e.Notes) > 0 {
+	// 不需要注释
+	// TODO  放到配置可配置,还有description
+	if len(e.Notes) > 0 && false {
 		p.Add(e.Name, e.Type, tag, "// "+e.Notes)
 	} else {
 		p.Add(e.Name, e.Type, tag)
