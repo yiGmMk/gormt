@@ -52,6 +52,7 @@ func (e *GenElement) Generate() string {
 			tags = append(tags, fmt.Sprintf(`%v:"%v"`, v, strings.Join(e.Tags[v], ";")))
 		}
 		if len(e.Notes) > 0 {
+			e.Notes = strings.ReplaceAll(e.Notes, "`", "")
 			tags = append(tags, fmt.Sprintf(`description:"%s"`, e.Notes))
 		}
 		tag = fmt.Sprintf("`%v`", strings.Join(tags, " "))
